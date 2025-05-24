@@ -1,0 +1,56 @@
+import pandas as pd
+import numpy as np
+import unicodedata
+import re
+
+
+def get_csv_data():
+    df = pd.read_csv('df_2013_2024_camp_brasileiro.csv')
+    return df
+
+def define_target_variable(df):
+    df['result'] = df.apply(
+        lambda row: (
+            'home winner' if row['home_team_goal_count'] > row['away_team_goal_count']
+            else 'away winner' if row['home_team_goal_count'] < row['away_team_goal_count']
+            else 'draw'
+        ),
+        axis=1
+    )
+
+    mapping = {'home winner': 0, 'away winner': 1, 'draw': 2}
+
+    df['result_code'] = df['result'].map(mapping)
+
+    return df
+
+def dummie_categorical_values(df):
+
+    dummies_variables = pd.get_dummies(df, columns=['home_team', 'away_team'], drop_first=True)
+
+    df = pd.concat([df.drop(['home_team_name', 'away_team_name'], axis=1), dummies_variables], axis=1)
+
+    return df
+
+def clean_column_names(df):
+    def clean_name(name):
+        # Convert to lowercase
+        name = name.lower()
+        # Replace spaces with underscores
+        name = name.replace(' ', '_')
+        # Remove accents
+        name = ''.join(
+            (c for c in unicodedata.normalize('NFD', name) 
+            if unicodedata.category(c) != 'Mn')
+        )
+        # Replace any remaining non-alphanumeric characters with underscores
+        name = re.sub(r'\W+', '_', name)
+        return name
+
+    # Apply the cleaning function to all column names
+    df.columns = [clean_name(col) for col in df.columns]
+    return df
+
+
+df = get_csv_data()
+df.head()
